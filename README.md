@@ -128,13 +128,35 @@ Downstream silver/gold pipelines should read `reviewed_blocks` for tabular data 
 
 ## Sample PDFs
 
-The `sample_pdfs/` directory contains sample PDF documents for testing:
+The `sample_pdfs/` directory contains a mix of generic test PDFs and synthetic
+Certificate-of-Analysis (CoA) documents that exercise the parser's table and
+multi-page handling.
 
+**Generic samples:**
 - `field_inspection_notes.pdf` — Building inspection field notes
 - `patient_intake_form.pdf` — Patient intake form
 - `meeting_notes.pdf` — Meeting minutes
 - `inventory_count_sheet.pdf` — Warehouse inventory count
 - `expense_report.pdf` — Expense report
+
+**Certificate-of-Analysis samples** (form layout with handwritten test values
+filled in by a "lab analyst" — exercises tables, key-value blocks, and
+multi-page parsing):
+- `CoA_Aluminum_Ingot_LOT-9098-F.pdf` — single-page metal assay
+- `CoA_Arabica_Coffee_LOT-2824-A.pdf` — single-page food commodity
+- `CoA_Hard_Red_Spring_Wheat_LOT-4853-C.pdf` — single-page grain
+- `CoA_MultiPage_Arabica_Coffee_LOT-MP-2026-001.pdf` — 3-page CoA with
+  detailed physical, chemical, microbiological, and sensory test panels
+
+**Generators** (extend with your own commodities / test panels):
+- `generate_samples.py` — generic PDFs (handwritten-style notes)
+- `generate_coa_samples.py` — single-page CoAs across multiple commodities
+- `generate_multipage_coa.py` — 3-page CoA with full test panel breakdown
+
+```bash
+pip install reportlab
+python sample_pdfs/generate_coa_samples.py
+```
 
 ## Tech Stack
 
