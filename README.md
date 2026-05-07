@@ -20,6 +20,21 @@ User uploads PDF
     → Validated content written to Delta table (<catalog>.pdf_parser.parsed_documents)
 ```
 
+## Quickstart
+
+```bash
+# 1. Clone
+git clone https://github.com/ffgdeo/pdf-parser-app.git && cd pdf-parser-app
+
+# 2. Edit app.py:14 — set CATALOG to your Unity Catalog catalog name
+
+# 3. Run the SQL in "Infrastructure Setup" below to create schema/volume/bronze table
+
+# 4. Create + deploy the app (see "Deployment" below)
+
+# 5. In the app's UI Settings: enable user authorization, add scopes `sql` and `files.files`
+```
+
 ## Authentication
 
 The app runs in **on-behalf-of-user (OBO) mode**. Each request executes as the logged-in user, so all SQL and UC Volume access is governed by that user's permissions — no service-principal grants required. The app reads the user's OAuth token from the `X-Forwarded-Access-Token` request header and passes it explicitly to the SQL connector and `WorkspaceClient`.

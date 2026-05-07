@@ -12,10 +12,14 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Constants ---
-CATALOG = "fd_serverless_workspace_catalog"
+# --- Configure these for your workspace ----------------------------------
+# Unity Catalog target: schema, volume, and bronze table all live under
+# CATALOG.SCHEMA. SCHEMA, VOLUME, and the bronze table name can stay as-is
+# or be renamed; just make sure the SQL in README.md matches.
+CATALOG = "fd_serverless_workspace_catalog"  # ← change this to your catalog
 SCHEMA = "pdf_parser"
 VOLUME = "uploads"
+# --------------------------------------------------------------------------
 VOLUME_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}"
 TABLE = f"{CATALOG}.{SCHEMA}.parsed_documents"
 
