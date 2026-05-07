@@ -39,7 +39,9 @@ git clone https://github.com/ffgdeo/pdf-parser-app.git && cd pdf-parser-app
 
 The app runs in **on-behalf-of-user (OBO) mode**. Each request executes as the logged-in user, so all SQL and UC Volume access is governed by that user's permissions — no service-principal grants required. The app reads the user's OAuth token from the `X-Forwarded-Access-Token` request header and passes it explicitly to the SQL connector and `WorkspaceClient`.
 
-OAuth scopes required (configured in the app's UI Settings):
+> ⚠️ **OBO is in Public Preview.** A workspace admin must enable it before you can configure user-authorization scopes on the app. Go to **Workspace Settings → Previews** (or **Advanced → Previews**, depending on your workspace UI) and toggle on the **"User authorization for Databricks Apps"** preview. Without this, the app will fall back to the service-principal identity and you'll need to GRANT the SP the relevant UC privileges instead.
+
+OAuth scopes required (configured in the app's UI Settings, after the preview is enabled):
 - `sql` — query the SQL warehouse, run `ai_parse_document`, write to bronze
 - `files.files` — upload PDFs to UC Volumes
 
