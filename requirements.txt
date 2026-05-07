@@ -1,2 +1,5 @@
 databricks-sql-connector>=3.0.0
 databricks-sdk>=0.20.0
+pandas>=2.0
+lxml>=4.9
+streamlit-pdf-viewer>=0.0.19
