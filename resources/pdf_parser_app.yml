@@ -1,0 +1,38 @@
+resources:
+  apps:
+    pdf_parser:
+      name: pdf-parser-${bundle.target}
+      description: "PDF parser with side-by-side review and typed-bronze sink. ${bundle.target} target."
+      source_code_path: ..
+
+      # OBO scopes — the workspace-level OBO preview toggle is still manual
+      # (Workspace Settings → Previews), but per-app scope assignment is here.
+      user_api_scopes:
+        - sql
+        - files.files
+
+      # Authoritative command + env for bundle-driven deploys. Overrides
+      # the source app.yaml at deploy time so per-target variables work.
+      config:
+        command:
+          - streamlit
+          - run
+          - app.py
+        env:
+          - name: DATABRICKS_WAREHOUSE_ID
+            value_from: sql-warehouse
+          - name: PDF_PARSER_CATALOG
+            value: ${var.catalog}
+          - name: PDF_PARSER_SCHEMA
+            value: ${var.schema}
+          - name: PDF_PARSER_VOLUME
+            value: ${var.volume}
+
+      # Resource bindings declared here so no UI step is needed.
+      # The `name: sql-warehouse` matches `value_from: sql-warehouse` above.
+      resources:
+        - name: sql-warehouse
+          description: "Warehouse for ai_parse_document and bronze Delta writes."
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE

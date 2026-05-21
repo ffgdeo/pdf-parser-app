@@ -3,6 +3,9 @@ command:
   - "run"
   - "app.py"
 
+# Environment variables and resource bindings are managed by the DAB
+# (see databricks.yml / resources/pdf_parser_app.yml). Kept here as a
+# minimal fallback so the app still launches if deployed without DABs.
 env:
   - name: DATABRICKS_WAREHOUSE_ID
     valueFrom: sql-warehouse

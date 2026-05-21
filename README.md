@@ -26,13 +26,16 @@ User uploads PDF
 # 1. Clone
 git clone https://github.com/ffgdeo/pdf-parser-app.git && cd pdf-parser-app
 
-# 2. Edit app.py:14 — set CATALOG to your Unity Catalog catalog name
+# 2. Edit databricks.yml — set the `profile:` and `catalog:` for each target
 
 # 3. Run the SQL in "Infrastructure Setup" below to create schema/volume/bronze table
 
-# 4. Create + deploy the app (see "Deployment" below)
+# 4. Deploy + start the app:
+databricks bundle deploy -t dev
+databricks bundle run pdf_parser -t dev
 
-# 5. In the app's UI Settings: enable user authorization, add scopes `sql` and `files.files`
+# 5. One-time per workspace: enable the OBO preview and add scopes `sql` + `files.files`
+#    in the app's UI Settings (see "Authentication" below — DABs can't toggle the preview).
 ```
 
 ## Authentication
@@ -53,35 +56,61 @@ OAuth scopes required (configured in the app's UI Settings, after the preview is
 
 ## Deployment
 
-### 1. Create the app
+### Option A: Databricks Asset Bundles (recommended)
+
+A bundle ships at the repo root (`databricks.yml` + `resources/pdf_parser_app.yml`) with `dev` and `prod` targets. The bundle owns the app name, env vars (catalog/schema/volume per target), and the SQL-warehouse resource binding — no UI steps needed except the one-time OBO toggle.
+
+```bash
+# Validate
+databricks bundle validate -t dev
+
+# Deploy source + app definition
+databricks bundle deploy -t dev
+
+# Start the app (creates it on first run, redeploys on subsequent)
+databricks bundle run pdf_parser -t dev
+```
+
+To deploy to prod, swap `-t dev` for `-t prod`. Tail logs anytime with `databricks apps logs pdf-parser-<target> --profile <your-profile>`.
+
+**Per-target configuration** lives in `databricks.yml`:
+
+```yaml
+variables:
+  catalog: {...}          # required, set per target
+  schema:  {default: pdf_parser}
+  volume:  {default: uploads}
+  warehouse_id:
+    lookup: {warehouse: "Serverless Starter Warehouse"}
+
+targets:
+  dev:  {workspace.profile: <dev-profile>,  variables.catalog: <dev-catalog>}
+  prod: {workspace.profile: <prod-profile>, variables.catalog: <prod-catalog>}
+```
+
+The bundle injects `PDF_PARSER_CATALOG`, `PDF_PARSER_SCHEMA`, `PDF_PARSER_VOLUME` into the app and binds the SQL warehouse as resource `sql-warehouse` (which `DATABRICKS_WAREHOUSE_ID` reads from).
+
+### Option B: Manual CLI deploy (no bundle)
 
 ```bash
 databricks apps create pdf-parser-app --profile <your-profile>
-```
-
-### 2. Upload source code
-
-```bash
 databricks workspace mkdirs /Workspace/Users/<your-email>/apps/pdf-parser-app --profile <your-profile>
 databricks workspace import-dir . /Workspace/Users/<your-email>/apps/pdf-parser-app --profile <your-profile>
-```
-
-### 3. Deploy
-
-```bash
 databricks apps deploy pdf-parser-app \
   --source-code-path /Workspace/Users/<your-email>/apps/pdf-parser-app \
   --profile <your-profile>
 ```
 
-### 4. Bind the SQL warehouse resource
+Then in the Apps UI: add the `sql-warehouse` SQL-warehouse resource manually. The defaults in `app.py` (`fd_serverless_workspace_catalog` / `pdf_parser` / `uploads`) are used unless you override via env vars on the app.
 
-In the Databricks Apps UI (or via `apps update --json`), add:
-- **SQL warehouse** resource with key `sql-warehouse` — used for `ai_parse_document` and table operations
+### One-time per workspace: enable OBO
 
-### 5. Enable user authorization
+The DAB cannot toggle Public Preview flags or app scopes. A workspace admin must:
 
-In the app's UI Settings page, add OAuth scopes: `sql`, `files.files`. Save.
+1. **Workspace Settings → Previews** → enable **"User authorization for Databricks Apps"**.
+2. In the app's UI Settings page (after first deploy), add OAuth scopes: `sql`, `files.files`.
+
+Without this the app falls back to the service-principal identity and you'll need to GRANT the SP the relevant UC privileges instead.
 
 ## Infrastructure Setup
 
@@ -108,13 +137,15 @@ CREATE TABLE IF NOT EXISTS <catalog>.pdf_parser.parsed_documents (
 );
 ```
 
-The catalog name is configured at the top of `app.py`:
+The catalog, schema, and volume are env-var driven:
 
 ```python
-CATALOG = "<catalog>"   # change to your target catalog
-SCHEMA  = "pdf_parser"
-VOLUME  = "uploads"
+CATALOG = os.getenv("PDF_PARSER_CATALOG", "fd_serverless_workspace_catalog")
+SCHEMA  = os.getenv("PDF_PARSER_SCHEMA",  "pdf_parser")
+VOLUME  = os.getenv("PDF_PARSER_VOLUME",  "uploads")
 ```
+
+When deployed via the DAB, these are injected per target from `databricks.yml`. The defaults are the fallback for direct-CLI deploys without a bundle.
 
 ## Bronze schema details
 

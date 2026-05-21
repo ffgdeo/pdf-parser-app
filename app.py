@@ -14,11 +14,11 @@ st.set_page_config(
 
 # --- Configure these for your workspace ----------------------------------
 # Unity Catalog target: schema, volume, and bronze table all live under
-# CATALOG.SCHEMA. SCHEMA, VOLUME, and the bronze table name can stay as-is
-# or be renamed; just make sure the SQL in README.md matches.
-CATALOG = "fd_serverless_workspace_catalog"  # ← change this to your catalog
-SCHEMA = "pdf_parser"
-VOLUME = "uploads"
+# CATALOG.SCHEMA. All three are injected as env vars by the DAB per target;
+# the defaults below keep the app runnable for non-DAB (direct-CLI) deploys.
+CATALOG = os.getenv("PDF_PARSER_CATALOG", "fd_serverless_workspace_catalog")
+SCHEMA = os.getenv("PDF_PARSER_SCHEMA", "pdf_parser")
+VOLUME = os.getenv("PDF_PARSER_VOLUME", "uploads")
 # --------------------------------------------------------------------------
 VOLUME_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}"
 TABLE = f"{CATALOG}.{SCHEMA}.parsed_documents"
@@ -87,13 +87,18 @@ def upload_file_to_volume(uploaded_file):
     prevents the SDK from co-mixing both auth paths.
     """
     from databricks.sdk import WorkspaceClient
+    from io import BytesIO
 
     host = os.environ["DATABRICKS_HOST"]
     w = WorkspaceClient(host=host, token=_require_user_token(), auth_type="pat")
     target_path = f"{VOLUME_PATH}/{uploaded_file.name}"
-    file_bytes = uploaded_file.getvalue()
 
-    w.files.upload(target_path, file_bytes, overwrite=True)
+    # SDK 0.110+ requires a file-like with .seekable() so it can decide
+    # whether the body is safe to retry. BytesIO satisfies that contract;
+    # raw bytes don't.
+    w.files.upload(
+        target_path, BytesIO(uploaded_file.getvalue()), overwrite=True
+    )
     return target_path
 
 

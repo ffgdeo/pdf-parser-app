@@ -1,0 +1,39 @@
+bundle:
+  name: pdf-parser-app
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog target for the pdf_parser schema, volume, and bronze table.
+  schema:
+    description: Schema under ${var.catalog}. Defaults to pdf_parser.
+    default: pdf_parser
+  volume:
+    description: Volume under ${var.catalog}.${var.schema} where uploaded PDFs land.
+    default: uploads
+  warehouse_id:
+    description: ID of the SQL warehouse the app binds to (ai_parse_document + Delta writes).
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+targets:
+  # NOTE: dev and prod intentionally point at the same workspace for now —
+  # replace the `profile:` and catalog values with the real prod target when
+  # the prod workspace is provisioned.
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: abc-demo
+    variables:
+      catalog: fd_serverless_workspace_catalog
+
+  prod:
+    mode: production
+    workspace:
+      profile: abc-demo  # TODO: replace with prod profile
+      root_path: /Workspace/Users/filipe.deo@databricks.com/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: fd_serverless_workspace_catalog  # TODO: replace with prod catalog
