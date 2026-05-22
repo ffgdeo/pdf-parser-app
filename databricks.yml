@@ -20,20 +20,24 @@ variables:
 
 targets:
   # NOTE: dev and prod intentionally point at the same workspace for now —
-  # replace the `profile:` and catalog values with the real prod target when
+  # replace the `host:` and catalog values with the real prod target when
   # the prod workspace is provisioned.
+  #
+  # `host:` (vs `profile:`) is portable across machines — auth resolves
+  # from the CLI's normal chain (env vars, OAuth/SSO, ~/.databrickscfg
+  # matching by host) so customers don't need a specific named profile.
   dev:
     default: true
     mode: development
     workspace:
-      profile: abc-demo
+      host: https://fevm-fd-serverless-workspace.cloud.databricks.com
     variables:
       catalog: fd_serverless_workspace_catalog
 
   prod:
     mode: production
     workspace:
-      profile: abc-demo  # TODO: replace with prod profile
+      host: https://fevm-fd-serverless-workspace.cloud.databricks.com  # TODO: replace with prod host
       root_path: /Workspace/Users/filipe.deo@databricks.com/.bundle/${bundle.name}/${bundle.target}
     variables:
       catalog: fd_serverless_workspace_catalog  # TODO: replace with prod catalog
