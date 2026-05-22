@@ -26,7 +26,8 @@ User uploads PDF
 # 1. Clone
 git clone https://github.com/ffgdeo/pdf-parser-app.git && cd pdf-parser-app
 
-# 2. Edit databricks.yml — set the `profile:` and `catalog:` for each target.
+# 2. Edit databricks.yml — replace the placeholder `host:` and `catalog:`
+#    for each target with your workspace URL and catalog name.
 #    The catalog must already exist; the schema, volume, and bronze table are
 #    auto-created on first app load.
 
