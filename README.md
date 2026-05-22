@@ -26,16 +26,16 @@ User uploads PDF
 # 1. Clone
 git clone https://github.com/ffgdeo/pdf-parser-app.git && cd pdf-parser-app
 
-# 2. Edit databricks.yml — set the `profile:` and `catalog:` for each target
+# 2. Edit databricks.yml — set the `profile:` and `catalog:` for each target.
+#    The catalog must already exist; the schema, volume, and bronze table are
+#    auto-created on first app load.
 
-# 3. Run the SQL in "Infrastructure Setup" below to create schema/volume/bronze table
-
-# 4. Deploy + start the app:
+# 3. Deploy + start the app:
 databricks bundle deploy -t dev
 databricks bundle run pdf_parser -t dev
 
-# 5. One-time per workspace: enable the OBO preview and add scopes `sql` + `files.files`
-#    in the app's UI Settings (see "Authentication" below — DABs can't toggle the preview).
+# 4. One-time per workspace: enable the OBO preview (DABs can't toggle it).
+#    See "Authentication" below.
 ```
 
 ## Authentication
@@ -114,18 +114,14 @@ Without this the app falls back to the service-principal identity and you'll nee
 
 ## Infrastructure Setup
 
-The app expects the following Unity Catalog objects (replace `<catalog>` with your target catalog):
+The app **self-bootstraps** its schema, volume, and bronze table on first load using `CREATE … IF NOT EXISTS` (see `_ensure_uc_objects()` in `app.py`). The only prerequisite is that the target **catalog already exists** and the calling user (under OBO) has `CREATE SCHEMA`, `CREATE VOLUME`, and `CREATE TABLE` privileges on it. Subsequent loads are no-ops.
+
+For reference, here's what the app creates under `<catalog>` (no need to run by hand):
 
 ```sql
--- Schema
 CREATE SCHEMA IF NOT EXISTS <catalog>.pdf_parser;
-
--- Volume for uploads
 CREATE VOLUME IF NOT EXISTS <catalog>.pdf_parser.uploads;
-
--- Bronze table — stores the original parser JSON, the human-readable markdown,
--- AND the typed JSON of validated blocks (used by downstream notebooks).
-CREATE TABLE IF NOT EXISTS <catalog>.pdf_parser.parsed_documents (
+CREATE TABLE  IF NOT EXISTS <catalog>.pdf_parser.parsed_documents (
   id              STRING NOT NULL,
   filename        STRING NOT NULL,
   upload_ts       TIMESTAMP NOT NULL,
@@ -136,6 +132,8 @@ CREATE TABLE IF NOT EXISTS <catalog>.pdf_parser.parsed_documents (
   submitted_ts    TIMESTAMP
 );
 ```
+
+These objects are **not bundle-managed** — `databricks bundle destroy` will tear down the app and the warehouse binding, but the table (and any parsed documents in it) will persist.
 
 The catalog, schema, and volume are env-var driven:
 

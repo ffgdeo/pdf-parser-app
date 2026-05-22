@@ -78,6 +78,36 @@ def execute_query(query, params=None):
         return None, None
 
 
+@st.cache_resource(show_spinner="Preparing Unity Catalog objects…")
+def _ensure_uc_objects():
+    """Idempotently create the schema, volume, and bronze table.
+
+    Runs once per app process (cached) and uses the first calling user's
+    OBO token. The catalog is assumed to exist — the user only needs
+    CREATE SCHEMA / VOLUME / TABLE inside it on first run. Subsequent
+    runs are no-ops via IF NOT EXISTS.
+    """
+    execute_query(f"CREATE SCHEMA IF NOT EXISTS {CATALOG}.{SCHEMA}")
+    execute_query(
+        f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{SCHEMA}.{VOLUME}"
+    )
+    execute_query(
+        f"""
+        CREATE TABLE IF NOT EXISTS {TABLE} (
+          id              STRING NOT NULL,
+          filename        STRING NOT NULL,
+          upload_ts       TIMESTAMP NOT NULL,
+          raw_parsed      STRING,
+          reviewed_text   STRING,
+          reviewed_blocks STRING,
+          submitted_by    STRING,
+          submitted_ts    TIMESTAMP
+        )
+        """
+    )
+    return True
+
+
 def upload_file_to_volume(uploaded_file):
     """Upload a file to UC volume as the calling user (OBO).
 
@@ -273,6 +303,19 @@ st.title("PDF Document Parser")
 st.caption(
     "Upload PDFs, parse them with Databricks AI, review and correct the output, then submit to a Delta table."
 )
+
+# Idempotently bootstrap schema / volume / bronze table on first load.
+# Errors here are fatal — the rest of the app assumes these objects exist.
+try:
+    _ensure_uc_objects()
+except Exception as e:
+    st.error(
+        f"Failed to bootstrap Unity Catalog objects under "
+        f"`{CATALOG}.{SCHEMA}`: {e}\n\n"
+        f"Confirm the calling user has CREATE SCHEMA / VOLUME / TABLE "
+        f"privileges on `{CATALOG}`."
+    )
+    st.stop()
 
 # Sidebar - show submitted documents
 with st.sidebar:
